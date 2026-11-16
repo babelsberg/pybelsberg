@@ -35,14 +35,6 @@ print(a.x, a.y) # -> 50.0 50.0
 print(b.x, b.y) # -> 30.0 50.0
 ```
 
-Setup
------
-Pybelsberg requires Python version >= 3.3.
-
-Z3 needs to be built from the [unstable branch](http://z3.codeplex.com/SourceControl/list/changesets?branch=unstable) (using the provided [instructions](http://z3.codeplex.com/SourceControl/latest?branch=unstable#README)) because only this branch (as of August 2014) supports Python 3.x. Make sure the Z3 directory is in the PYTHONPATH.
-
-Pybelsberg uses [tox](https://testrun.org/tox/latest/) and [py.test](http://pytest.org/latest/) for testing.
-
 Documentation
 -------------
 All of the supported functionality is covered by tests in the /tests directory.

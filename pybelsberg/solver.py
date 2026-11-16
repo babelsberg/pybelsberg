@@ -40,7 +40,7 @@ class Solver:
         """
         self.solver.push()
         try:
-            if extra_constraints:
+            if extra_constraints is not None:
                 self.solver.add(extra_constraints)
             self.solver.add(*self.soft_constraints.values())
 

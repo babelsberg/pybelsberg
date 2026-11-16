@@ -22,7 +22,8 @@ class WrappingNamespace(dict):
         try:
             obj = dict.__getitem__(self, key)
         except KeyError:
-            obj = self['__builtins__'][key]
+            import builtins
+            obj = builtins.__dict__[key]
         if not key.startswith('__'):
             self.wrap(obj)
         return obj
