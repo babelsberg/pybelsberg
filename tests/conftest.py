@@ -1,5 +1,12 @@
 import math
+import os
 import pytest
+
+
+@pytest.fixture(scope="session", autouse=True)
+def z3_timeout():
+    import z3
+    z3.set_param('timeout', 5000)
 
 
 @pytest.fixture

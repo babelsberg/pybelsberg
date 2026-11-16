@@ -35,12 +35,8 @@ def test_multiple(Point):
                          "context already contains other constraints "
                          "(see test_retain_maximum_sat_core)")
 def test_complex(Point, almost):
-    # cap pathological nlsat divergence (effectively a hang) on sqrt constraints
-    z3.set_param("timeout", 5000)
-    try:
-        _test_complex(Point, almost)
-    finally:
-        z3.set_param("timeout", 0)
+    # the session-wide solver timeout (conftest) caps nlsat divergence
+    _test_complex(Point, almost)
 
 
 def _test_complex(Point, almost):

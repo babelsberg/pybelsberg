@@ -38,29 +38,19 @@ class Solver:
         `Constraints` after ``@always``.)
 
         """
-        self.solver.push()
-        try:
-            if extra_constraints is not None:
-                self.solver.add(extra_constraints)
-            self.solver.add(*self.soft_constraints.values())
+        # rebuild a plain solver per check: nlsat goes pathological on
+        # nonlinear `sqrt` constraints when solving incrementally
+        self.solver = z3.Solver()
+        self.solver.add(self.constraints)
+        if extra_constraints is not None:
+            self.solver.add(extra_constraints)
+        self.solver.add(*self.soft_constraints.values())
 
-            check = self.solver.check()
-            if check == z3.sat:
-                solution = self.solver.model()
-                # deleted_bindings = [
-                self.soft_constraints = {s: k for s, k
-                                         in self.soft_constraints.items()
-                                         if z3.is_true(solution[s])}
-                return solution
-            else:
-                raise ConstraintError(self.solver, extra_constraints)
-        finally:
-            self.solver.pop()
-
-
-# make ExprRef -- and thus BoolRef -- hashable;  required in
-# `Solver.soft_constraints`, which is a a mapping of `z3.BoolRef` to
-# `z3.Implies`
-def ExprRef_hash(self):
-    return self.hash()
-z3.ExprRef.__hash__ = ExprRef_hash
+        check = self.solver.check()
+        if check == z3.sat:
+            solution = self.solver.model()
+            self.soft_constraints = {s: k for s, k
+                                     in self.soft_constraints.items()
+                                     if z3.is_true(solution[s])}
+            return solution
+        raise ConstraintError(self.solver, extra_constraints)

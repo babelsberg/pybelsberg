@@ -27,7 +27,6 @@ def test_float(Point, almost):
     assert almost(a.x, 2.5)
 
 
-@pytest.mark.xfail
 def test_list(Object):
     a = Object()
     a.seq = [1, 2]
@@ -39,18 +38,16 @@ def test_list(Object):
     assert a.seq[0] == a.seq[1]
 
 
-@pytest.mark.xfail
 def test_dict(Object):
     a = {'b': 2}
 
     @always
     def constraint_constant_ab():
-        assert a['b'] == 7
+        yield a['b'] == 7
 
     assert a['b'] == 7
 
 
-@pytest.mark.xfail
 def test_association(Object):
     a = Object()
     b = Object()
@@ -64,7 +61,6 @@ def test_association(Object):
     assert a.b.c == 10
 
 
-@pytest.mark.xfail
 def test_recurse(Object):
     a = Object()
     a.table = {'seq': [1, 2]}

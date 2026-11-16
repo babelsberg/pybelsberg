@@ -38,6 +38,40 @@ BUILTIN_MODULE = mock.patch.multiple('builtins',
 )
 
 
+# `BoolRef.__bool__` raises for symbolic expressions, which makes `in`
+# unusable in constraints.  During discovery, such truthiness tests are
+# captured instead of boolified, and `discover` registers what comes out;
+# outside discovery the original raising behavior is restored.
+
+_capture = None
+_orig_boolref_bool = z3.BoolRef.__bool__
+
+
+def _boolref_bool(self):
+    if z3.is_true(self):
+        return True
+    if z3.is_false(self):
+        return False
+    if _capture is not None:
+        _capture.append(self)
+        return True
+    return _orig_boolref_bool(self)
+
+
+z3.BoolRef.__bool__ = _boolref_bool
+
+
+@contextlib.contextmanager
+def capture_constraints():
+    """Collect boolified symbolic expressions in a list."""
+    global _capture
+    prev, _capture = _capture, []
+    try:
+        yield _capture
+    finally:
+        _capture = prev
+
+
 @contextlib.contextmanager
 def patch_builtins():
     with contextlib.ExitStack() as ctx:
