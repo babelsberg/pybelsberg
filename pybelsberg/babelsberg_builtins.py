@@ -1,3 +1,18 @@
+"""The substitutes a constraint function works with.
+
+While a constraint is discovered, `patch_builtins()` has `abs`, `all`, `any`,
+`sum` and `math.sqrt` produce Z3 expressions instead of computing, and
+`all_different`/`all_same` are the constraint helpers users import from
+`pybelsberg` -- things a plain Python loop or comparison could not state
+about symbolic values.
+
+Truthiness is the one thing that cannot be substituted: `z3.BoolRef.__bool__`
+raises for symbolic expressions, which makes `in`, `if` or `and` unusable in
+constraints.  During discovery, such truthiness tests are captured instead of
+boolified (see `capture_constraints`) and registered as constraints by
+`environment.Environment.discover`; outside discovery the original raising
+behavior is restored.
+"""
 import contextlib
 from unittest import mock
 import z3
@@ -11,13 +26,8 @@ def _all_different(lst):
             yield elem != other
 
 def all_same(lst):
-    return z3.And(_all_same(lst))
-def _all_same(lst):
-    last = _sentinel
-    for idx, elem in enumerate(lst[1:]):
-        if last == _sentinel:
-            continue
-        yield last == elem
+    lst = list(lst)
+    return z3.And([elem == lst[0] for elem in lst[1:]])
 
 
 def Abs(number):
@@ -37,11 +47,6 @@ BUILTIN_MODULE = mock.patch.multiple('builtins',
     sum = z3.Sum,
 )
 
-
-# `BoolRef.__bool__` raises for symbolic expressions, which makes `in`
-# unusable in constraints.  During discovery, such truthiness tests are
-# captured instead of boolified, and `discover` registers what comes out;
-# outside discovery the original raising behavior is restored.
 
 _capture = None
 _orig_boolref_bool = z3.BoolRef.__bool__

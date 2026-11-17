@@ -6,7 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from pybelsberg import Solver, always
+from pybelsberg import always
 
 
 class Color(enum.IntEnum):
@@ -113,13 +113,14 @@ for c1, c2 in BORDERS:
     COUNTRIES_BY_NAME[c2].neighbors.append(COUNTRIES_BY_NAME[c1])
 
 
-with Solver():
-    for country in COUNTRIES:
-        always(lambda: country.get_color() in COLORS)
+# one, global environment: every constraint has to hold together with all
+# the ones registered before it
+for country in COUNTRIES:
+    always(lambda: country.get_color() in COLORS)
 
-    for c1, c2 in itertools.combinations(COUNTRIES, 2):
-        if c1.is_neighbor_of(c2):
-            always(lambda: c1.get_color() != c2.get_color())
+for c1, c2 in itertools.combinations(COUNTRIES, 2):
+    if c1.is_neighbor_of(c2):
+        always(lambda: c1.get_color() != c2.get_color())
 
 
 def run_gui():

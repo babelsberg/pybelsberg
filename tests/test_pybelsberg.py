@@ -21,10 +21,9 @@ def test_basic(Point):
 def test_multiple(Point):
     a = Point(0, 10)
 
-    @always
-    def constraint_constant_xy():
-        yield a.x == 20
-        yield a.y == 30
+    # one constraint per `always`; the environment collects them together
+    always(lambda: a.x == 20)
+    always(lambda: a.y == 30)
 
     assert a.x == 20
     assert a.y == 30
@@ -69,11 +68,20 @@ def test_lambda(Point):
 def test_erroneous_constraint(Point):
     a = Point(0, 0)
 
+    always(lambda: a.x == 10)
     with pytest.raises(ConstraintError):
-        @always
-        def constraint_conflicting():
-            yield a.x == 10
-            yield a.x == 20
+        always(lambda: a.x == 20)
+
+
+def test_generators_are_no_constraints(Point):
+    a = Point(0, 0)
+
+    def two_expressions():
+        yield a.x == 10
+        yield a.x == 20
+
+    with pytest.raises(TypeError):
+        always(two_expressions)
 
 def test_erroneous_assignment(Point):
     a = Point(0, 10)

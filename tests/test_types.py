@@ -43,7 +43,7 @@ def test_dict(Object):
 
     @always
     def constraint_constant_ab():
-        yield a['b'] == 7
+        return a['b'] == 7
 
     assert a['b'] == 7
 

@@ -2,11 +2,21 @@ import math
 import os
 import pytest
 
+import pybelsberg
+
 
 @pytest.fixture(scope="session", autouse=True)
 def z3_timeout():
     import z3
     z3.set_param('timeout', 5000)
+
+
+@pytest.fixture(autouse=True)
+def clean_environment():
+    """No constraint of another test is in force here (or afterwards)."""
+    pybelsberg.clear()
+    yield
+    pybelsberg.clear()
 
 
 @pytest.fixture

@@ -25,15 +25,61 @@ b = Point(0.0, 0.0)
 # Declare a constraint that should always be satisfied
 @always
 def constant_distance():
-    yield a.distance(b) == 20
+    return a.distance(b) == 20
 
-print(a.x, a.y) # -> 20.0 0.0
-print(b.x, b.y) # -> 0.0 0.0
+print(a.distance(b)) # -> 20.0
 
-a.x, a.y = 50.0
-print(a.x, a.y) # -> 50.0 50.0
-print(b.x, b.y) # -> 30.0 50.0
+a.x = 50.0           # ... and stays satisfied when things change
+print(a.x, a.distance(b)) # -> 50.0 20.0
 ```
+
+Assignments that cannot be reconciled with the constraints are refused with a
+`ConstraintError` instead of being applied silently:
+
+```python
+from pybelsberg import always, clear, ConstraintError
+
+COLORS = [0, 1, 2, 3]
+
+class Country:
+    def __init__(self, name):
+        self.name = name
+        self.color = 0
+
+france = Country("France")
+always(lambda: france.color in COLORS)
+
+france.color = 2       # fine, any of the four colors will do
+try:
+    france.color = 9   # not one of them
+except ConstraintError:
+    print(france.color) # -> 2, the assignment never happened
+```
+
+The environment
+---------------
+
+Constraints live in one implicit, global *environment* (Babelsberg's name
+for it) and are satisfied *together*: a new constraint may move variables an
+older one had put where it wanted them, as long as all of them stay
+satisfied.  One `always` registers one constraint (the expression a function
+returns), so collecting constraints over a collection means looping:
+
+```python
+for country in countries:
+    always(lambda: country.get_color() in COLORS)
+
+for c1, c2 in neighbouring_pairs(countries):
+    always(lambda: c1.get_color() != c2.get_color())
+```
+
+Apart from adding constraints, all of them can be thrown away at once with
+`pybelsberg.clear()`, which is mostly useful to start a test with a clean
+slate (see `tests/conftest.py`).  Objects keep the values a solution has
+written back to them, but afterwards nothing is symbolic anymore.  The one
+environment is `pybelsberg.environment` (an `Environment`), which is worth
+looking at if a test wants to know what is currently in force; adding and
+throwing away constraints is all there is to it otherwise.
 
 Documentation
 -------------

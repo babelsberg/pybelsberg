@@ -1,7 +1,7 @@
 import math
 import pytest
 
-from pybelsberg import always, ConstraintError, is_in
+from pybelsberg import always, ConstraintError, environment
 
 
 @pytest.fixture
@@ -30,20 +30,21 @@ def Rectangle():
     return Rectangle
 
 
-def patch_roles(constraint, id_to_role):
-    return {(id_to_role[id(obj)], attr)
-            for (obj, attr) in constraint.namespace.patches}
+def patch_roles(id_to_role):
+    """The patched (role, attribute) pairs of the global environment"""
+    return {(id_to_role[id(obj)], key)
+            for (obj, key), _ in environment.namespace.all_patches()}
 
 
 def test_nested_point_attributes_are_wrapped(Point, Rectangle, almost):
     rect = Rectangle(Point(0, 0), Point(30, 40))
     b = Point(0, 0)
 
-    c = always(lambda: (rect.bottom_right - rect.top_left).distance(b) == 50)
+    always(lambda: (rect.bottom_right - rect.top_left).distance(b) == 50)
 
     # every patch belongs to a real corner or to `b`, never to a temp
     roles = {id(rect.top_left): 'tl', id(rect.bottom_right): 'br', id(b): 'b'}
-    assert patch_roles(c, roles) == {
+    assert patch_roles(roles) == {
         ('tl', 'x'), ('tl', 'y'), ('br', 'x'), ('br', 'y'),
         ('b', 'x'), ('b', 'y'),
     }
@@ -55,12 +56,12 @@ def test_two_rectangles_without_top_level_point(Rectangle, Point, almost):
     r1 = Rectangle(Point(0, 0), Point(10, 0))
     r2 = Rectangle(Point(5, 5), Point(20, 5))
 
-    c = always(lambda:
-               (r1.bottom_right - r1.top_left).distance(r2.top_left) == 50)
+    always(lambda:
+           (r1.bottom_right - r1.top_left).distance(r2.top_left) == 50)
 
     roles = {id(r1.top_left): 'r1.tl', id(r1.bottom_right): 'r1.br',
              id(r2.top_left): 'r2.tl', id(r2.bottom_right): 'r2.br'}
-    assert patch_roles(c, roles) == {
+    assert patch_roles(roles) == {
         ('r1.br', 'x'), ('r1.br', 'y'),
         ('r1.tl', 'x'), ('r1.tl', 'y'),
         ('r2.tl', 'x'), ('r2.tl', 'y'),
@@ -103,7 +104,7 @@ def test_membership_in_choices_forces_valid_assignment():
     item = Item()
     item.color = 0
 
-    always(lambda: is_in(item.color, COLORS))  # plain `in` works too, see env
+    always(lambda: item.color in COLORS)  # `in` becomes a disjunction, see wrappers
 
     assert item.color in COLORS
 
@@ -120,11 +121,9 @@ def test_dict_value_reads():
     cfg = Config()
     cfg.options = {'retries': 2, 'debug': 1}
 
-    c = always(lambda: cfg.options['retries'] > cfg.options['debug'])
+    always(lambda: cfg.options['retries'] > cfg.options['debug'])
 
-    keys = {key
-            for _, (_, keymap) in c.namespace.container_patches.items()
-            for key in keymap}
+    keys = {key for (_, key), _ in environment.namespace.all_patches()}
     assert {'retries', 'debug'} <= keys
     assert cfg.options['retries'] > cfg.options['debug']
 
@@ -136,8 +135,8 @@ def test_tuple_reads_are_symbolic_only():
     p = Pair()
     p.pair = (1, 2)
 
-    c = always(lambda: p.pair[0] == p.pair[1])  # sat: model says both equal
+    always(lambda: p.pair[0] == p.pair[1])  # sat: model says both equal
 
-    assert len(c.namespace.container_patches[id(p.pair)][1]) == 2
+    assert len(environment.namespace.patches[id(p.pair)][1]) == 2
     # tuples are immutable: reads participate, write-back skips them
     assert p.pair == (1, 2)

@@ -13,44 +13,40 @@ class Solver:
     :type constraints: List of Z3 expressions (`z3.ExprRef`).
     :param bindings:  Optional variable assignments that SHOULD be satisifed,
                       but can be invalidated by the solver and subsequently
-                      ignored.
-    :type bindings: List of Z3 variable to value mappings,
-                    e.g., ``[(z3.FreshInt(), 10)]``.
+                      ignored, e.g., ``[(z3.FreshInt(), 10)]``.
+    :type bindings: Iterable of Z3 variable to value pairs.
 
     """
-    def __init__(self, constraints, bindings):
-        self.solver = z3.Solver()
-
+    def __init__(self, constraints, bindings=()):
         # for introspection
-        self.constraints = constraints
-        self.bindings = bindings
+        self.constraints = list(constraints)
+        self.bindings = list(bindings)
 
         self.soft_constraints = {}
-        for var, value in bindings.values():
+        for var, value in self.bindings:
             proposition = z3.FreshBool()
-            constraint = z3.Implies(proposition, var == value)
-            self.soft_constraints[proposition] = constraint
-        self.solver.add(constraints)
+            self.soft_constraints[proposition] = z3.Implies(proposition,
+                                                            var == value)
 
     def solve(self, extra_constraints=None):
         """Return a solution to the constraint system, including all conditions
-        in `extra_constraints` (which are variable assignments when called from
-        `Constraints` after ``@always``.)
+        in `extra_constraints` (which are variable assignments when called
+        from `environment.Environment.solve` after an assignment.)
 
         """
         # rebuild a plain solver per check: nlsat goes pathological on
         # nonlinear `sqrt` constraints when solving incrementally
-        self.solver = z3.Solver()
-        self.solver.add(self.constraints)
+        solver = z3.Solver()
+        solver.add(self.constraints)
         if extra_constraints is not None:
-            self.solver.add(extra_constraints)
-        self.solver.add(*self.soft_constraints.values())
+            solver.add(extra_constraints)
+        solver.add(*self.soft_constraints.values())
 
-        check = self.solver.check()
+        check = solver.check()
         if check == z3.sat:
-            solution = self.solver.model()
+            solution = solver.model()
             self.soft_constraints = {s: k for s, k
                                      in self.soft_constraints.items()
                                      if z3.is_true(solution[s])}
             return solution
-        raise ConstraintError(self.solver, extra_constraints)
+        raise ConstraintError(solver, extra_constraints)
